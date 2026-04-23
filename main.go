@@ -19,6 +19,7 @@ type Config struct {
 	PollInterval      time.Duration
 	GenerationTimeout time.Duration
 	MaxConcurrent     int
+	PromptTemplate    string
 }
 
 func parseConfig() (Config, error) {
@@ -65,11 +66,21 @@ func parseConfig() (Config, error) {
 		}
 	}
 
+	promptFile := os.Getenv("PROMPT_TEMPLATE")
+	if promptFile == "" {
+		return Config{}, fmt.Errorf("PROMPT_TEMPLATE environment variable is required")
+	}
+	promptTemplate, err := loadPromptTemplate(promptFile)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		WatchRepos:        repoList,
 		PollInterval:      pollInterval,
 		GenerationTimeout: genTimeout,
 		MaxConcurrent:     maxConcurrent,
+		PromptTemplate:    promptTemplate,
 	}, nil
 }
 
@@ -84,7 +95,7 @@ func main() {
 		log.Fatal("GITHUB_TOKEN environment variable is required")
 	}
 	ghClient := newGitHubClient(ghToken)
-	gen := &Generator{Timeout: cfg.GenerationTimeout}
+	gen := &Generator{Timeout: cfg.GenerationTimeout, PromptTemplate: cfg.PromptTemplate}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

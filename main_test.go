@@ -1,12 +1,23 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
 
+func setTestPromptTemplate(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "prompt.tmpl")
+	os.WriteFile(path, []byte("test prompt {{.PRURL}}"), 0644)
+	t.Setenv("PROMPT_TEMPLATE", path)
+}
+
 func TestParseConfig_Defaults(t *testing.T) {
 	t.Setenv("WATCH_REPOS", "org/repo1,org/repo2")
+	setTestPromptTemplate(t)
 
 	cfg, err := parseConfig()
 	if err != nil {
@@ -38,6 +49,7 @@ func TestParseConfig_CustomValues(t *testing.T) {
 	t.Setenv("POLL_INTERVAL", "5m")
 	t.Setenv("GENERATION_TIMEOUT", "1h")
 	t.Setenv("MAX_CONCURRENT", "3")
+	setTestPromptTemplate(t)
 
 	cfg, err := parseConfig()
 	if err != nil {
@@ -65,6 +77,7 @@ func TestParseConfig_MissingRepos(t *testing.T) {
 func TestParseConfig_InvalidMaxConcurrent(t *testing.T) {
 	t.Setenv("WATCH_REPOS", "org/repo1")
 	t.Setenv("MAX_CONCURRENT", "0")
+	setTestPromptTemplate(t)
 
 	_, err := parseConfig()
 	if err == nil {
@@ -72,8 +85,18 @@ func TestParseConfig_InvalidMaxConcurrent(t *testing.T) {
 	}
 }
 
+func TestParseConfig_MissingPromptTemplate(t *testing.T) {
+	t.Setenv("WATCH_REPOS", "org/repo1")
+
+	_, err := parseConfig()
+	if err == nil {
+		t.Fatal("expected error when PROMPT_TEMPLATE is not set")
+	}
+}
+
 func TestParseConfig_TrimsWhitespace(t *testing.T) {
 	t.Setenv("WATCH_REPOS", " org/repo1 , org/repo2 ")
+	setTestPromptTemplate(t)
 
 	cfg, err := parseConfig()
 	if err != nil {

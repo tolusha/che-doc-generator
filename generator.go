@@ -3,26 +3,45 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
+	"strings"
+	"text/template"
 	"time"
 )
 
 type Generator struct {
-	Timeout time.Duration
+	Timeout      time.Duration
+	PromptTemplate string
 }
 
 func (g *Generator) BuildPrompt(prURL string) string {
-	return fmt.Sprintf(`You are an automated documentation generator. Follow these steps exactly:
+	tmpl, err := template.New("prompt").Parse(g.PromptTemplate)
+	if err != nil {
+		panic(fmt.Sprintf("invalid prompt template: %v", err))
+	}
+	var buf strings.Builder
+	data := map[string]string{"PRURL": prURL}
+	if err := tmpl.Execute(&buf, data); err != nil {
+		panic(fmt.Sprintf("prompt template execution failed: %v", err))
+	}
+	return buf.String()
+}
 
-1. Using che-mcp-server, start a DevWorkspace.
-2. Inject Claude code in the DevWorkspace. 
-2. In the DevWorkspace, clone git@github.com:eclipse-che/che-docs.git
-3. Add marketplace: /plugin marketplace add tolusha/claude-plugins and install plugin /plugin install che-docs-from-pr@claude-plugins
-4. Add marketplace: /plugin marketplace add redhat-documentation/redhat-docs-agent-tools and install the plugin /plugin install cqa-tools@redhat-docs-agent-tools
-5. Using the che-docs-from-pr skill, generate documentation for this PR: %s
-6. Return ONLY the created documentation PR URL on a line by itself.
-7. Delete the DevWorkspace using che-mcp-server.`, prURL)
+func loadPromptTemplate(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading prompt template %s: %w", path, err)
+	}
+	content := strings.TrimSpace(string(data))
+	if content == "" {
+		return "", fmt.Errorf("prompt template %s is empty", path)
+	}
+	if !strings.Contains(content, "{{.PRURL}}") {
+		return "", fmt.Errorf("prompt template %s must contain {{.PRURL}} placeholder", path)
+	}
+	return content, nil
 }
 
 func (g *Generator) Run(ctx context.Context, prURL string) (string, error) {

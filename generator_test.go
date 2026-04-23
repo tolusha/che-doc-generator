@@ -1,13 +1,21 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
+const testTemplate = `You are a doc generator.
+Analyze this PR: {{.PRURL}}
+Use che-mcp-server to start a DevWorkspace.
+Clone git@github.com:eclipse-che/che-docs.git
+Delete the DevWorkspace when done.`
+
 func TestBuildPrompt(t *testing.T) {
-	gen := &Generator{Timeout: 30 * time.Minute}
+	gen := &Generator{Timeout: 30 * time.Minute, PromptTemplate: testTemplate}
 	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/42")
 
 	if !strings.Contains(prompt, "https://github.com/org/repo/pull/42") {
@@ -18,12 +26,6 @@ func TestBuildPrompt(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "che-docs.git") {
 		t.Error("prompt should reference che-docs repo")
-	}
-	if !strings.Contains(prompt, "tolusha/claude-plugins") {
-		t.Error("prompt should reference tolusha/claude-plugins")
-	}
-	if !strings.Contains(prompt, "redhat-docs-agent-tools") {
-		t.Error("prompt should reference redhat-docs-agent-tools marketplace")
 	}
 	if !strings.Contains(prompt, "Delete the DevWorkspace") {
 		t.Error("prompt should include workspace cleanup step")
@@ -63,22 +65,54 @@ func TestParseDocPRURL_IgnoresSourcePR(t *testing.T) {
 	}
 }
 
-func TestBuildPrompt_ContainsAllSteps(t *testing.T) {
-	gen := &Generator{Timeout: 30 * time.Minute}
+func TestBuildPrompt_SubstitutesURL(t *testing.T) {
+	tmpl := "Generate docs for {{.PRURL}} now."
+	gen := &Generator{Timeout: 30 * time.Minute, PromptTemplate: tmpl}
 	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1")
 
-	required := []string{
-		"start a DevWorkspace",
-		"clone git@github.com:eclipse-che/che-docs.git",
-		"tolusha/claude-plugins",
-		"redhat-docs-agent-tools",
-		"che-docs-from-pr",
-		"Delete the DevWorkspace",
+	expected := "Generate docs for https://github.com/org/repo/pull/1 now."
+	if prompt != expected {
+		t.Errorf("got %q, want %q", prompt, expected)
 	}
+}
 
-	for _, r := range required {
-		if !strings.Contains(prompt, r) {
-			t.Errorf("prompt missing required content: %q", r)
+func TestLoadPromptTemplate(t *testing.T) {
+	dir := t.TempDir()
+
+	t.Run("valid", func(t *testing.T) {
+		path := filepath.Join(dir, "valid.tmpl")
+		os.WriteFile(path, []byte("Do something with {{.PRURL}}"), 0644)
+		tmpl, err := loadPromptTemplate(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
-	}
+		if !strings.Contains(tmpl, "{{.PRURL}}") {
+			t.Error("template should contain placeholder")
+		}
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		_, err := loadPromptTemplate(filepath.Join(dir, "nope.tmpl"))
+		if err == nil {
+			t.Fatal("expected error for missing file")
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		path := filepath.Join(dir, "empty.tmpl")
+		os.WriteFile(path, []byte("  \n  "), 0644)
+		_, err := loadPromptTemplate(path)
+		if err == nil {
+			t.Fatal("expected error for empty template")
+		}
+	})
+
+	t.Run("no placeholder", func(t *testing.T) {
+		path := filepath.Join(dir, "noplaceholder.tmpl")
+		os.WriteFile(path, []byte("Do something without a URL"), 0644)
+		_, err := loadPromptTemplate(path)
+		if err == nil {
+			t.Fatal("expected error when placeholder is missing")
+		}
+	})
 }
