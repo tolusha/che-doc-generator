@@ -50,3 +50,24 @@ func TestParseDocPRURL_NoPR(t *testing.T) {
 		t.Fatal("expected error when no PR URL in output")
 	}
 }
+
+func TestBuildPrompt_ContainsAllSteps(t *testing.T) {
+	gen := &Generator{Timeout: 30 * time.Minute}
+	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1")
+
+	required := []string{
+		"start a DevWorkspace",
+		"clone git@github.com:eclipse-che/che-docs.git",
+		"/plugin install https://github.com/tolusha/claude-plugins",
+		"/plugin marketplace add https://github.com/redhat-documentation/redhat-docs-agent-tools.git",
+		"redhat-docs-agent-tools marketplace",
+		"che-docs-from-pr",
+		"Delete the DevWorkspace",
+	}
+
+	for _, r := range required {
+		if !strings.Contains(prompt, r) {
+			t.Errorf("prompt missing required content: %q", r)
+		}
+	}
+}
