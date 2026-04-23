@@ -50,6 +50,9 @@ func parseConfig() (Config, error) {
 		if err != nil {
 			return Config{}, fmt.Errorf("invalid MAX_CONCURRENT: %w", err)
 		}
+		if n <= 0 {
+			return Config{}, fmt.Errorf("MAX_CONCURRENT must be positive, got %d", n)
+		}
 		maxConcurrent = n
 	}
 
@@ -76,6 +79,9 @@ func main() {
 	}
 
 	ghToken := os.Getenv("GITHUB_TOKEN")
+	if ghToken == "" {
+		log.Fatal("GITHUB_TOKEN environment variable is required")
+	}
 	ghClient := newGitHubClient(ghToken)
 	gen := &Generator{Timeout: cfg.GenerationTimeout}
 
@@ -115,16 +121,20 @@ func main() {
 				}
 
 				wg.Add(1)
-				sem <- struct{}{}
 				go func(t TriggerComment) {
 					defer wg.Done()
-					defer func() { <-sem }()
+					select {
+					case sem <- struct{}{}:
+						defer func() { <-sem }()
+					case <-ctx.Done():
+						return
+					}
 
 					log.Printf("generating docs for %s/%s#%d", t.Owner, t.Repo, t.PRNumber)
-					docPRURL, err := gen.Run(t.PRURL)
+					docPRURL, err := gen.Run(ctx, t.PRURL)
 					if err != nil {
 						log.Printf("generation failed for %s/%s#%d: %v", t.Owner, t.Repo, t.PRNumber, err)
-						msg := fmt.Sprintf("Failed to generate documentation: %v", err)
+						msg := "Failed to generate documentation. See pod logs for details."
 						if commentErr := ghClient.PostComment(ctx, t.Owner, t.Repo, t.PRNumber, msg); commentErr != nil {
 							log.Printf("error posting failure comment: %v", commentErr)
 						}

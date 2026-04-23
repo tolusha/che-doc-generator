@@ -62,6 +62,16 @@ func TestParseConfig_MissingRepos(t *testing.T) {
 	}
 }
 
+func TestParseConfig_InvalidMaxConcurrent(t *testing.T) {
+	t.Setenv("WATCH_REPOS", "org/repo1")
+	t.Setenv("MAX_CONCURRENT", "0")
+
+	_, err := parseConfig()
+	if err == nil {
+		t.Fatal("expected error when MAX_CONCURRENT is 0")
+	}
+}
+
 func TestParseConfig_TrimsWhitespace(t *testing.T) {
 	t.Setenv("WATCH_REPOS", " org/repo1 , org/repo2 ")
 

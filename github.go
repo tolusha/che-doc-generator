@@ -40,54 +40,80 @@ func (g *GitHubClient) FindTriggerComments(owner, repo string) ([]TriggerComment
 	ctx := context.Background()
 	var triggers []TriggerComment
 
-	prs, _, err := g.client.PullRequests.List(ctx, owner, repo, &github.PullRequestListOptions{
-		State: "open",
-	})
-	if err != nil {
-		return nil, err
+	prOpts := &github.PullRequestListOptions{
+		State:       "open",
+		ListOptions: github.ListOptions{PerPage: 100},
 	}
-
-	for _, pr := range prs {
-		comments, _, err := g.client.Issues.ListComments(ctx, owner, repo, pr.GetNumber(), nil)
+	for {
+		prs, resp, err := g.client.PullRequests.List(ctx, owner, repo, prOpts)
 		if err != nil {
 			return nil, err
 		}
 
-		for _, comment := range comments {
-			if !strings.Contains(comment.GetBody(), triggerPhrase) {
-				continue
+		for _, pr := range prs {
+			commentOpts := &github.IssueListCommentsOptions{
+				ListOptions: github.ListOptions{PerPage: 100},
 			}
+			for {
+				comments, commentResp, err := g.client.Issues.ListComments(ctx, owner, repo, pr.GetNumber(), commentOpts)
+				if err != nil {
+					return nil, err
+				}
 
-			processed, err := g.hasEyesReaction(ctx, owner, repo, comment.GetID())
-			if err != nil {
-				return nil, err
-			}
-			if processed {
-				continue
-			}
+				for _, comment := range comments {
+					if !strings.Contains(comment.GetBody(), triggerPhrase) {
+						continue
+					}
 
-			triggers = append(triggers, TriggerComment{
-				Owner:     owner,
-				Repo:      repo,
-				PRNumber:  pr.GetNumber(),
-				CommentID: comment.GetID(),
-				PRURL:     pr.GetHTMLURL(),
-			})
+					processed, err := g.hasEyesReaction(ctx, owner, repo, comment.GetID())
+					if err != nil {
+						return nil, err
+					}
+					if processed {
+						continue
+					}
+
+					triggers = append(triggers, TriggerComment{
+						Owner:     owner,
+						Repo:      repo,
+						PRNumber:  pr.GetNumber(),
+						CommentID: comment.GetID(),
+						PRURL:     pr.GetHTMLURL(),
+					})
+				}
+
+				if commentResp.NextPage == 0 {
+					break
+				}
+				commentOpts.Page = commentResp.NextPage
+			}
 		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+		prOpts.Page = resp.NextPage
 	}
 
 	return triggers, nil
 }
 
 func (g *GitHubClient) hasEyesReaction(ctx context.Context, owner, repo string, commentID int64) (bool, error) {
-	reactions, _, err := g.client.Reactions.ListIssueCommentReactions(ctx, owner, repo, commentID, nil)
-	if err != nil {
-		return false, err
-	}
-	for _, r := range reactions {
-		if r.GetContent() == "eyes" {
-			return true, nil
+	opts := &github.ListOptions{PerPage: 100}
+	for {
+		reactions, resp, err := g.client.Reactions.ListIssueCommentReactions(ctx, owner, repo, commentID, opts)
+		if err != nil {
+			return false, err
 		}
+		for _, r := range reactions {
+			if r.GetContent() == "eyes" {
+				return true, nil
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 	return false, nil
 }

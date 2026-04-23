@@ -25,10 +25,10 @@ func (g *Generator) BuildPrompt(prURL string) string {
 8. Delete the DevWorkspace using che-mcp-server.`, prURL)
 }
 
-func (g *Generator) Run(prURL string) (string, error) {
+func (g *Generator) Run(ctx context.Context, prURL string) (string, error) {
 	prompt := g.BuildPrompt(prURL)
 
-	ctx, cancel := context.WithTimeout(context.Background(), g.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, g.Timeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "claude",
@@ -48,7 +48,7 @@ func (g *Generator) Run(prURL string) (string, error) {
 	return parseDocPRURL(string(output))
 }
 
-var prURLPattern = regexp.MustCompile(`https://github\.com/[^\s"]+/pull/\d+`)
+var prURLPattern = regexp.MustCompile(`https://github\.com/eclipse-che/che-docs/pull/\d+`)
 
 func parseDocPRURL(output string) (string, error) {
 	match := prURLPattern.FindString(output)

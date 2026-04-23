@@ -51,6 +51,18 @@ func TestParseDocPRURL_NoPR(t *testing.T) {
 	}
 }
 
+func TestParseDocPRURL_IgnoresSourcePR(t *testing.T) {
+	output := `{"result": "I analyzed https://github.com/org/repo/pull/42 and created https://github.com/eclipse-che/che-docs/pull/55."}`
+
+	url, err := parseDocPRURL(output)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if url != "https://github.com/eclipse-che/che-docs/pull/55" {
+		t.Errorf("expected che-docs PR URL, got %s", url)
+	}
+}
+
 func TestBuildPrompt_ContainsAllSteps(t *testing.T) {
 	gen := &Generator{Timeout: 30 * time.Minute}
 	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1")
