@@ -70,9 +70,8 @@ func TestBuildPrompt_ContainsAllSteps(t *testing.T) {
 	required := []string{
 		"start a DevWorkspace",
 		"clone git@github.com:eclipse-che/che-docs.git",
-		"/plugin install https://github.com/tolusha/claude-plugins",
-		"/plugin marketplace add https://github.com/redhat-documentation/redhat-docs-agent-tools.git",
-		"redhat-docs-agent-tools marketplace",
+		"tolusha/claude-plugins",
+		"redhat-docs-agent-tools",
 		"che-docs-from-pr",
 		"Delete the DevWorkspace",
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -101,9 +102,13 @@ func main() {
 
 	poll := func() {
 		for _, repo := range cfg.WatchRepos {
-			parts := strings.SplitN(repo, "/", 2)
-			if len(parts) != 2 {
-				log.Printf("invalid repo format: %s (expected owner/repo)", repo)
+			slug := repo
+			if u, err := url.Parse(slug); err == nil && u.Host != "" {
+				slug = strings.TrimPrefix(u.Path, "/")
+			}
+			parts := strings.SplitN(slug, "/", 2)
+			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+				log.Printf("invalid repo format: %s (expected owner/repo or https://github.com/owner/repo)", repo)
 				continue
 			}
 			owner, repoName := parts[0], parts[1]
