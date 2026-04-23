@@ -40,6 +40,7 @@ All configuration via environment variables:
 | Variable | Default | Description |
 |---|---|---|
 | `WATCH_REPOS` | (required) | Comma-separated GitHub repos to watch (e.g., `org/repo1,org/repo2`) |
+| `PROMPT_TEMPLATE` | (required) | Path to the prompt template file (Go `text/template` with `{{.PRURL}}` placeholder) |
 | `POLL_INTERVAL` | `10m` | Polling interval (Go duration string) |
 | `GENERATION_TIMEOUT` | `30m` | Max time for a Claude Code subprocess |
 | `MAX_CONCURRENT` | `1` | Max parallel doc generations |
