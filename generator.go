@@ -17,13 +17,13 @@ type Generator struct {
 	PromptTemplate string
 }
 
-func (g *Generator) BuildPrompt(prURL, notes string) string {
+func (g *Generator) BuildPrompt(prURL string) string {
 	tmpl, err := template.New("prompt").Parse(g.PromptTemplate)
 	if err != nil {
 		panic(fmt.Sprintf("invalid prompt template: %v", err))
 	}
 	var buf strings.Builder
-	data := map[string]string{"PRURL": prURL, "Notes": notes}
+	data := map[string]string{"PRURL": prURL}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		panic(fmt.Sprintf("prompt template execution failed: %v", err))
 	}
@@ -45,8 +45,8 @@ func loadPromptTemplate(path string) (string, error) {
 	return content, nil
 }
 
-func (g *Generator) Run(ctx context.Context, prURL, notes string) (string, error) {
-	prompt := g.BuildPrompt(prURL, notes)
+func (g *Generator) Run(ctx context.Context, prURL string) (string, error) {
+	prompt := g.BuildPrompt(prURL)
 	log.Printf("claude prompt:\n%s", prompt)
 
 	ctx, cancel := context.WithTimeout(ctx, g.Timeout)

@@ -17,7 +17,6 @@ type TriggerComment struct {
 	PRNumber  int
 	CommentID int64
 	PRURL     string
-	Notes     string
 }
 
 type GitHubClient struct {
@@ -75,18 +74,12 @@ func (g *GitHubClient) FindTriggerComments(owner, repo string) ([]TriggerComment
 						continue
 					}
 
-					notes := ""
-					if idx := strings.Index(comment.GetBody(), triggerPhrase); idx >= 0 {
-						notes = strings.TrimSpace(comment.GetBody()[idx+len(triggerPhrase):])
-					}
-
 					triggers = append(triggers, TriggerComment{
 						Owner:     owner,
 						Repo:      repo,
 						PRNumber:  pr.GetNumber(),
 						CommentID: comment.GetID(),
 						PRURL:     pr.GetHTMLURL(),
-						Notes:     notes,
 					})
 				}
 

@@ -147,7 +147,7 @@ func main() {
 					}
 
 					log.Printf("generating docs for %s/%s#%d", t.Owner, t.Repo, t.PRNumber)
-					docPRURL, err := gen.Run(ctx, t.PRURL, t.Notes)
+					docPRURL, err := gen.Run(ctx, t.PRURL)
 					if err != nil {
 						log.Printf("generation failed for %s/%s#%d: %v", t.Owner, t.Repo, t.PRNumber, err)
 						msg := "Failed to generate documentation. See pod logs for details."

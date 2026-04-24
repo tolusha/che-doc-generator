@@ -6,7 +6,6 @@ You are an automated documentation generator. Follow these steps exactly:
 4. Add marketplace: /plugin marketplace add tolusha/claude-plugins and install plugin /plugin install che-docs-from-pr@claude-plugins
 5. Add marketplace: /plugin marketplace add redhat-documentation/redhat-docs-agent-tools and install the plugin /plugin install cqa-tools@redhat-docs-agent-tools
 6. Use the /che-docs-from-pr skill to generate documentation for this PR: {{.PRURL}}
-   IMPORTANT: You are running unattended. Do NOT use AskUserQuestion at any point. Skip any user confirmation steps and proceed with your best suggestions automatically. Skip the build preview entirely.{{if .Notes}}
-   Additional notes: {{.Notes}}{{end}}
+   IMPORTANT: You are running unattended. Do NOT use AskUserQuestion at any point. Skip any user confirmation steps and proceed with your best suggestions automatically. Skip the build preview entirely.
 7. Return ONLY the created documentation PR URL on a line by itself.
 8. Delete the DevWorkspace using che-mcp-server.

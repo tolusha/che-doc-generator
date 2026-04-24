@@ -16,7 +16,7 @@ Delete the DevWorkspace when done.`
 
 func TestBuildPrompt(t *testing.T) {
 	gen := &Generator{Timeout: 1 * time.Hour, PromptTemplate: testTemplate}
-	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/42", "")
+	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/42")
 
 	if !strings.Contains(prompt, "https://github.com/org/repo/pull/42") {
 		t.Error("prompt should contain the PR URL")
@@ -68,26 +68,9 @@ func TestParseDocPRURL_IgnoresSourcePR(t *testing.T) {
 func TestBuildPrompt_SubstitutesURL(t *testing.T) {
 	tmpl := "Generate docs for {{.PRURL}} now."
 	gen := &Generator{Timeout: 1 * time.Hour, PromptTemplate: tmpl}
-	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1", "")
+	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1")
 
 	expected := "Generate docs for https://github.com/org/repo/pull/1 now."
-	if prompt != expected {
-		t.Errorf("got %q, want %q", prompt, expected)
-	}
-}
-
-func TestBuildPrompt_WithNotes(t *testing.T) {
-	tmpl := "Analyze {{.PRURL}}.{{if .Notes}}\nNotes: {{.Notes}}{{end}}"
-	gen := &Generator{Timeout: 1 * time.Hour, PromptTemplate: tmpl}
-
-	prompt := gen.BuildPrompt("https://github.com/org/repo/pull/1", "focus on API changes")
-	expected := "Analyze https://github.com/org/repo/pull/1.\nNotes: focus on API changes"
-	if prompt != expected {
-		t.Errorf("got %q, want %q", prompt, expected)
-	}
-
-	prompt = gen.BuildPrompt("https://github.com/org/repo/pull/1", "")
-	expected = "Analyze https://github.com/org/repo/pull/1."
 	if prompt != expected {
 		t.Errorf("got %q, want %q", prompt, expected)
 	}

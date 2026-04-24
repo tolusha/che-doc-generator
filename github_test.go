@@ -56,40 +56,6 @@ func TestFindTriggerComments_FindsUnprocessed(t *testing.T) {
 	if triggers[0].PRNumber != 1 {
 		t.Errorf("expected PR number 1, got %d", triggers[0].PRNumber)
 	}
-	expected := "for this PR"
-	if triggers[0].Notes != expected {
-		t.Errorf("expected notes %q, got %q", expected, triggers[0].Notes)
-	}
-}
-
-func TestFindTriggerComments_NotesEmpty(t *testing.T) {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /repos/org/repo/pulls", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.PullRequest{{Number: github.Ptr(1)}})
-	})
-
-	mux.HandleFunc("GET /repos/org/repo/issues/1/comments", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.IssueComment{
-			{ID: github.Ptr(int64(100)), Body: github.Ptr("@generate-che-doc")},
-		})
-	})
-
-	mux.HandleFunc("GET /repos/org/repo/issues/comments/100/reactions", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode([]*github.Reaction{})
-	})
-
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
-
-	client := newGitHubClient("fake-token", srv.URL)
-	triggers, err := client.FindTriggerComments("org", "repo")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if triggers[0].Notes != "" {
-		t.Errorf("expected empty notes, got %q", triggers[0].Notes)
-	}
 }
 
 func TestFindTriggerComments_SkipsProcessed(t *testing.T) {
