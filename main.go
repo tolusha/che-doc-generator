@@ -37,7 +37,7 @@ func parseConfig() (Config, error) {
 		pollInterval = d
 	}
 
-	genTimeout := 30 * time.Minute
+	genTimeout := 1 * time.Hour
 	if v := os.Getenv("GENERATION_TIMEOUT"); v != "" {
 		d, err := time.ParseDuration(v)
 		if err != nil {
@@ -107,7 +107,6 @@ func main() {
 	var wg sync.WaitGroup
 
 	log.Printf("starting che-doc-generator: watching %v, poll every %v", cfg.WatchRepos, cfg.PollInterval)
-	log.Printf("prompt template:\n%s", cfg.PromptTemplate)
 
 	ticker := time.NewTicker(cfg.PollInterval)
 	defer ticker.Stop()
@@ -148,11 +147,11 @@ func main() {
 					}
 
 					log.Printf("generating docs for %s/%s#%d", t.Owner, t.Repo, t.PRNumber)
-					docPRURL, err := gen.Run(ctx, t.PRURL)
+					docPRURL, err := gen.Run(ctx, t.PRURL, t.Notes)
 					if err != nil {
 						log.Printf("generation failed for %s/%s#%d: %v", t.Owner, t.Repo, t.PRNumber, err)
 						msg := "Failed to generate documentation. See pod logs for details."
-						if commentErr := ghClient.PostComment(ctx, t.Owner, t.Repo, t.PRNumber, msg); commentErr != nil {
+						if commentErr := ghClient.UpsertComment(ctx, t.Owner, t.Repo, t.PRNumber, msg); commentErr != nil {
 							log.Printf("error posting failure comment: %v", commentErr)
 						}
 						return
@@ -160,7 +159,7 @@ func main() {
 
 					log.Printf("docs generated for %s/%s#%d: %s", t.Owner, t.Repo, t.PRNumber, docPRURL)
 					msg := fmt.Sprintf("Documentation PR created: %s", docPRURL)
-					if commentErr := ghClient.PostComment(ctx, t.Owner, t.Repo, t.PRNumber, msg); commentErr != nil {
+					if commentErr := ghClient.UpsertComment(ctx, t.Owner, t.Repo, t.PRNumber, msg); commentErr != nil {
 						log.Printf("error posting success comment: %v", commentErr)
 					}
 				}(trigger)

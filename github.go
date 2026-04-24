@@ -9,6 +9,7 @@ import (
 )
 
 const triggerPhrase = "@generate-che-doc"
+const botCommentMarker = "<!-- che-doc-generator -->"
 
 type TriggerComment struct {
 	Owner     string
@@ -16,6 +17,7 @@ type TriggerComment struct {
 	PRNumber  int
 	CommentID int64
 	PRURL     string
+	Notes     string
 }
 
 type GitHubClient struct {
@@ -73,12 +75,18 @@ func (g *GitHubClient) FindTriggerComments(owner, repo string) ([]TriggerComment
 						continue
 					}
 
+					notes := ""
+					if idx := strings.Index(comment.GetBody(), triggerPhrase); idx >= 0 {
+						notes = strings.TrimSpace(comment.GetBody()[idx+len(triggerPhrase):])
+					}
+
 					triggers = append(triggers, TriggerComment{
 						Owner:     owner,
 						Repo:      repo,
 						PRNumber:  pr.GetNumber(),
 						CommentID: comment.GetID(),
 						PRURL:     pr.GetHTMLURL(),
+						Notes:     notes,
 					})
 				}
 
@@ -123,9 +131,46 @@ func (g *GitHubClient) AddEyesReaction(ctx context.Context, owner, repo string, 
 	return err
 }
 
-func (g *GitHubClient) PostComment(ctx context.Context, owner, repo string, prNumber int, body string) error {
-	_, _, err := g.client.Issues.CreateComment(ctx, owner, repo, prNumber, &github.IssueComment{
-		Body: github.Ptr(body),
+func (g *GitHubClient) FindBotComment(ctx context.Context, owner, repo string, prNumber int) (*int64, error) {
+	opts := &github.IssueListCommentsOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	for {
+		comments, resp, err := g.client.Issues.ListComments(ctx, owner, repo, prNumber, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range comments {
+			if strings.Contains(c.GetBody(), botCommentMarker) {
+				id := c.GetID()
+				return &id, nil
+			}
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return nil, nil
+}
+
+func (g *GitHubClient) UpsertComment(ctx context.Context, owner, repo string, prNumber int, body string) error {
+	markedBody := botCommentMarker + "\n" + body
+
+	existingID, err := g.FindBotComment(ctx, owner, repo, prNumber)
+	if err != nil {
+		return err
+	}
+
+	if existingID != nil {
+		_, _, err = g.client.Issues.EditComment(ctx, owner, repo, *existingID, &github.IssueComment{
+			Body: github.Ptr(markedBody),
+		})
+		return err
+	}
+
+	_, _, err = g.client.Issues.CreateComment(ctx, owner, repo, prNumber, &github.IssueComment{
+		Body: github.Ptr(markedBody),
 	})
 	return err
 }

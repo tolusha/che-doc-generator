@@ -36,8 +36,8 @@ func TestParseConfig_Defaults(t *testing.T) {
 	if cfg.PollInterval != 10*time.Minute {
 		t.Errorf("expected 10m default, got %v", cfg.PollInterval)
 	}
-	if cfg.GenerationTimeout != 30*time.Minute {
-		t.Errorf("expected 30m default, got %v", cfg.GenerationTimeout)
+	if cfg.GenerationTimeout != 1*time.Hour {
+		t.Errorf("expected 1h default, got %v", cfg.GenerationTimeout)
 	}
 	if cfg.MaxConcurrent != 1 {
 		t.Errorf("expected 1 default, got %d", cfg.MaxConcurrent)
