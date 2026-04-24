@@ -8,7 +8,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const triggerPhrase = "@generate-che-doc"
+const triggerPhrase = "/generate-che-doc"
 
 type TriggerComment struct {
 	Owner       string
