@@ -107,6 +107,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	log.Printf("starting che-doc-generator: watching %v, poll every %v", cfg.WatchRepos, cfg.PollInterval)
+	log.Printf("prompt template:\n%s", cfg.PromptTemplate)
 
 	ticker := time.NewTicker(cfg.PollInterval)
 	defer ticker.Stop()
