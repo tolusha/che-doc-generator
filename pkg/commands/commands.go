@@ -12,8 +12,10 @@
 package commands
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type SubCommandType string
@@ -41,12 +43,13 @@ var (
 	}
 )
 
-func BuildWelcomeMessage() string {
+func BuildWelcomeMessage(pollInterval time.Duration) string {
 	var b strings.Builder
 
 	b.WriteString(WelcomeMarker)
 	b.WriteString("\n")
 	b.WriteString("Hi! I'm **che-doc-generator** — I help create documentation PRs from code changes.\n\n")
+	b.WriteString(fmt.Sprintf("I check for new commands every **%s**.\n\n", pollInterval))
 	b.WriteString("**Available commands**:\n")
 
 	for _, subCommand := range SubCommands {

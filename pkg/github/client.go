@@ -17,6 +17,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/v68/github"
 	"github.com/tolusha/che-doc-generator/pkg/config"
@@ -38,14 +39,11 @@ type Trigger struct {
 type Client struct {
 	client       *github.Client
 	allowedUsers []string
+	pollInterval time.Duration
 }
 
 const (
 	eyesReaction = "eyes"
-)
-
-var (
-	welcomeMessage = commands.BuildWelcomeMessage()
 )
 
 func New(cfg *config.Config) (*Client, error) {
@@ -58,7 +56,7 @@ func New(cfg *config.Config) (*Client, error) {
 	httpClient := oauth2.NewClient(context.Background(), tokenSource)
 	client := github.NewClient(httpClient)
 
-	return &Client{client: client, allowedUsers: cfg.AllowedUsers}, nil
+	return &Client{client: client, allowedUsers: cfg.AllowedUsers, pollInterval: cfg.PollInterval}, nil
 }
 
 func (g *Client) FindTriggerComment(
@@ -67,8 +65,9 @@ func (g *Client) FindTriggerComment(
 	comments []*github.IssueComment,
 	pullRequest *github.PullRequest,
 ) (*Trigger, error) {
+	for i := len(comments) - 1; i >= 0; i-- {
+		comment := comments[i]
 
-	for _, comment := range comments {
 		ok, subCommand := commands.Parse(comment.GetBody())
 		if !ok {
 			continue
@@ -165,17 +164,13 @@ func (g *Client) PostWelcomeComment(
 	owner, repo string,
 	pullRequest *github.PullRequest,
 ) error {
-	if err := g.PostPullRequestComment(
+	return g.PostPullRequestComment(
 		ctx,
 		owner,
 		repo,
 		pullRequest.GetNumber(),
-		welcomeMessage,
-	); err != nil {
-		return err
-	}
-
-	return nil
+		commands.BuildWelcomeMessage(g.pollInterval),
+	)
 }
 
 func (g *Client) IsPullRequestAuthorEligible(pullRequest *github.PullRequest) bool {

@@ -29,9 +29,10 @@ import (
 )
 
 type Generator struct {
-	ghClient *github.Client
-	timeout  time.Duration
-	template string
+	ghClient     *github.Client
+	timeout      time.Duration
+	pollInterval time.Duration
+	template     string
 }
 
 var (
@@ -57,9 +58,10 @@ func New(
 	}
 
 	return &Generator{
-		ghClient: ghClient,
-		timeout:  cfg.GenerationTimeout,
-		template: promptTemplate,
+		ghClient:     ghClient,
+		timeout:      cfg.GenerationTimeout,
+		pollInterval: cfg.PollInterval,
+		template:     promptTemplate,
 	}, nil
 }
 
@@ -157,7 +159,7 @@ func (g *Generator) handleHelp(ctx context.Context, trigger *github.Trigger) {
 		trigger.Owner,
 		trigger.Repo,
 		trigger.PRNumber,
-		commands.BuildWelcomeMessage(),
+		commands.BuildWelcomeMessage(g.pollInterval),
 	); err != nil {
 		log.Printf("[ERROR] error posting help comment: %v", err)
 	}

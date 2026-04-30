@@ -123,7 +123,7 @@ func pollFunc(
 
 				// post welcome message
 				if ghClient.IsPullRequestAuthorEligible(pullRequest) && !ghClient.HasWelcomeComment(comments) {
-					log.Printf("posting welcome comment on %s/%s#%d", owner, repo, pullRequest.GetNumber())
+					log.Printf("[INFO] posting welcome comment on %s/%s#%d", owner, repo, pullRequest.GetNumber())
 
 					err := ghClient.PostWelcomeComment(ctx, owner, repo, pullRequest)
 					if err != nil {
